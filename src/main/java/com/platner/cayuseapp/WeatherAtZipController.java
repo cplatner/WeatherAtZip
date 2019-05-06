@@ -29,8 +29,8 @@ public class WeatherAtZipController
     @Value("${elevationapi.appid}")
     private String elevationApiAppId;
 
-    Map<String, String> timezones = new HashMap<>();
-    Map<String, String> elevations = new HashMap<>();
+    private Map<String, String> timezones = new HashMap<>();
+    private Map<String, String> elevations = new HashMap<>();
 
     @GetMapping("/weather")
     public WeatherMessage weather(@RequestParam(value = "zipcode") String zipcode)
