@@ -1,0 +1,55 @@
+//import org.gradle.internal.os.OperatingSystem
+
+buildscript {
+    repositories {
+        mavenLocal()
+        mavenCentral()
+        maven { url "http://repo.spring.io/plugins-release" }
+        maven { url "https://plugins.gradle.org/m2/" }
+    }
+    dependencies {
+        classpath "org.springframework.boot:spring-boot-gradle-plugin:${spring_boot_version}"
+        classpath "io.spring.gradle:propdeps-plugin:0.0.10.RELEASE"
+//        classpath "gradle.plugin.com.gorylenko.gradle-git-properties:gradle-git-properties:1.5.2"
+        //jhipster-needle-gradle-buildscript-dependency - JHipster will add additional gradle build script plugins here
+    }
+}
+
+plugins {
+	id 'org.springframework.boot' version '2.1.4.RELEASE'
+	id 'java'
+    id "io.spring.dependency-management" version "1.0.6.RELEASE"
+}
+
+
+group = 'com.platner'
+version = '0.0.1-SNAPSHOT'
+targetCompatibility=1.8
+sourceCompatibility = '1.8'
+
+repositories {
+	mavenCentral()
+    jcenter()
+}
+
+dependencies {
+    compile "com.fasterxml.jackson.core:jackson-annotations"
+    compile "com.fasterxml.jackson.core:jackson-databind"
+
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testImplementation 'org.springframework.restdocs:spring-restdocs-mockmvc'
+}
+
+bootJar {
+    mainClassName = 'com.platner.cayuseapp.CayuseappApplication'
+}
+
+// test {
+// 	outputs.dir snippetsDir
+// }
+
+// asciidoctor {
+// 	inputs.dir snippetsDir
+// 	dependsOn test
+// }
