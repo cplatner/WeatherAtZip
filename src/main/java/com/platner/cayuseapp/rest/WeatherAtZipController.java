@@ -1,8 +1,10 @@
-package com.platner.cayuseapp;
+package com.platner.cayuseapp.rest;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.platner.cayuseapp.SimpleRestTemplate;
+import com.platner.cayuseapp.model.WeatherMessage;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;

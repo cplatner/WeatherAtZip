@@ -1,4 +1,4 @@
-package com.platner.cayuseapp;
+package com.platner.cayuseapp.model;
 
 public class WeatherMessage
 {
