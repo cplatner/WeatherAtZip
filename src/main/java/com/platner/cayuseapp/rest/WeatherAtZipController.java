@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.platner.cayuseapp.SimpleRestTemplate;
+import com.platner.cayuseapp.model.WeatherData;
 import com.platner.cayuseapp.model.WeatherMessage;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -40,86 +41,105 @@ public class WeatherAtZipController
     @Value("${elevationapi.appid}")
     private String elevationApiAppId;
 
-    private Map<String, String> timezones = new HashMap<>();
-    private Map<String, String> elevations = new HashMap<>();
+    /**
+     * Cache for timezonesByZip, since they don't change between calls
+     */
+    private Map<String, String> timezonesByZip = new HashMap<>();
+    /**
+     * Cache for elevationsByZip, since they don't change between calls
+     */
+    private Map<String, String> elevationsByZip = new HashMap<>();
+
+    private static ObjectMapper mapper = new ObjectMapper();
 
     @GetMapping
     public ResponseEntity<?> weather(@RequestParam(value = "zipcode") String zipcode)
     {
-        ResponseEntity<?> checkZip = validateZipcode(zipcode);
-        if (checkZip.getStatusCode().isError()) {
-            return checkZip;
-        }
-
-        ObjectMapper mapper = new ObjectMapper();
         SimpleRestTemplate restClient = new SimpleRestTemplate();
 
-        String city = "", temp = "", timezone = "", elevation = "";
-        String lat = "", lon = "";
-
-        //* Get weather
-        String weatherUrl = String.format(weatherApiUri, zipcode, weatherApiAppId);
-        ResponseEntity<?> response = get(weatherUrl);
-        if (response.getStatusCode().isError()) {
-            return response;
-        }
+        WeatherData data = new WeatherData();
         try {
-            JsonNode root = mapper.readTree(response.getBody().toString());
-            //* temperature is at main.temp
-            temp = root.at("/main/temp").asText();
-            city = root.at("/name").asText();
-            lat = root.at("/coord/lat").asText();
-            lon = root.at("/coord/lon").asText();
-        }
-        catch (JsonParseException e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error parsing data from temperature server");
-        }
-        catch (IOException e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error reading data from temperature server");
-        }
+            ResponseEntity<?> checkZip = validateZipcode(zipcode);
+            if (checkZip.getStatusCode().isError()) {
+                return checkZip;
+            }
 
-        //* Get timezonee
-        if (timezones.containsKey(zipcode)) {
-            timezone = timezones.get(zipcode);
-        } else {
-            String timezoneUrl = String.format(timezoneApiUrl, lat, lon, Instant.now().getEpochSecond(), timezoneApiAppId);
-            String s = restClient.get(timezoneUrl);
+            data.setZipcode(zipcode);
+            //* Get weather
+            String weatherUrl = String.format(weatherApiUri, zipcode, weatherApiAppId);
+            ResponseEntity<?> response = get(weatherUrl);
+            if (response.getStatusCode().isError()) {
+                return response;
+            }
             try {
-                JsonNode root = mapper.readTree(s);
-                timezone = root.at("/timeZoneName").asText();
-                timezones.put(zipcode, timezone);
+                JsonNode root = mapper.readTree(response.getBody().toString());
+                data.setTemperature(root.at("/main/temp").asText())
+                        .setCity(root.at("/name").asText())
+                        .setLatitude(root.at("/coord/lat").asText())
+                        .setLongitude(root.at("/coord/lon").asText());
+
             }
             catch (JsonParseException e) {
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error parsing data from temperature server");
+                throw new WeatherRestException(
+                        ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error parsing data from temperature server"));
             }
             catch (IOException e) {
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error reading data from temperature server");
+                throw new WeatherRestException(
+                        ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error reading data from temperature server"));
+            }
+
+            //* Get timezonee
+            if (timezonesByZip.containsKey(zipcode)) {
+                data.setTimezone(timezonesByZip.get(zipcode));
+            } else {
+                String timezoneUrl = String.format(timezoneApiUrl,
+                        data.getLatitude(), data.getLongitude(), Instant.now().getEpochSecond(), timezoneApiAppId);
+                String s = restClient.get(timezoneUrl);
+                try {
+                    JsonNode root = mapper.readTree(s);
+                    timezonesByZip.put(zipcode,
+                            data.setTimezone(root.at("/timeZoneName").asText()).getTimezone());
+                }
+                catch (JsonParseException e) {
+                    throw new WeatherRestException(
+                            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error parsing data from timezone server"));
+                }
+                catch (IOException e) {
+                    throw new WeatherRestException(
+                            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error reading data from timezone server"));
+                }
+            }
+
+            //* Get elevation
+            if (elevationsByZip.containsKey(zipcode)) {
+                data.setElevation(elevationsByZip.get(zipcode));
+            } else {
+                String elevationUrl = String.format(elevationApiUrl, data.getLatitude(), data.getLongitude(), elevationApiAppId);
+                String s = restClient.get(elevationUrl);
+                try {
+                    JsonNode root = mapper.readTree(s);
+                    elevationsByZip.put(zipcode,
+                            data.setElevation(root.at("/results/0/elevation").asText()).getElevation());
+                }
+                catch (JsonParseException e) {
+                    throw new WeatherRestException(
+                            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error parsing data from elevation server"));
+                }
+                catch (IOException e) {
+                    throw new WeatherRestException(
+                            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error reading data from elevation server"));
+                }
             }
         }
-
-        //* Get elevation
-        if (elevations.containsKey(zipcode)) {
-            elevation = elevations.get(zipcode);
-        } else {
-            String elevationUrl = String.format(elevationApiUrl, lat, lon, elevationApiAppId);
-            String s = restClient.get(elevationUrl);
-            try {
-                JsonNode root = mapper.readTree(s);
-                elevation = root.at("/results/0/elevation").asText();
-                elevations.put(zipcode, elevation);
-            }
-            catch (JsonParseException e) {
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error parsing data from temperature server");
-            }
-            catch (IOException e) {
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error reading data from temperature server");
-            }
+        catch (WeatherRestException e) {
+            return e.getInternalEntity();
         }
 
-        return new ResponseEntity<>(new WeatherMessage(city, temp, timezone, elevation), HttpStatus.OK);
+        return new ResponseEntity<>(new WeatherMessage(data), HttpStatus.OK);
     }
 
     private ResponseEntity<?> get(String uri)
+            throws WeatherRestException
     {
         RestTemplate rest = new RestTemplate();
         HttpHeaders headers = new HttpHeaders();
@@ -133,7 +153,8 @@ public class WeatherAtZipController
                     HttpMethod.GET, new HttpEntity<>("", headers), String.class);
         }
         catch (HttpStatusCodeException e) {
-            return ResponseEntity.status(e.getStatusCode()).body("Error getting data from outside service");
+            throw new WeatherRestException(
+                    ResponseEntity.status(e.getStatusCode()).body("Error getting data from outside service"));
         }
 
         return responseEntity;

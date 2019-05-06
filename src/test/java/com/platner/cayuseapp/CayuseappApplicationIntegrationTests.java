@@ -39,7 +39,7 @@ public class CayuseappApplicationIntegrationTests
     }
 
     /**
-     * This zip is somewhere in Boston, but the OpenWeatherMap API doesn't seem to support Zip+4
+     * This zip is somewhere in Boston, but the OpenWeatherMap API doesn't seem to support Zip+4.
      */
     @Test
     public void invalidZip_tooLongZip_failsWithBadRequest()
@@ -84,7 +84,8 @@ public class CayuseappApplicationIntegrationTests
     }
 
     /**
-     * Post code for London with country identifier.
+     * Post code for London with country identifier.  I didn't see thi sas technically in the spec, since the spec
+     * only addressed providing the zip code.  However, I wanted to prove it worked.
      */
     @Test
     public void valid_nonUsZip_succeeds()
