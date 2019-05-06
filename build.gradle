@@ -1,5 +1,3 @@
-//import org.gradle.internal.os.OperatingSystem
-
 buildscript {
     repositories {
         mavenLocal()
@@ -10,8 +8,6 @@ buildscript {
     dependencies {
         classpath "org.springframework.boot:spring-boot-gradle-plugin:${spring_boot_version}"
         classpath "io.spring.gradle:propdeps-plugin:0.0.10.RELEASE"
-//        classpath "gradle.plugin.com.gorylenko.gradle-git-properties:gradle-git-properties:1.5.2"
-        //jhipster-needle-gradle-buildscript-dependency - JHipster will add additional gradle build script plugins here
     }
 }
 
@@ -21,11 +17,10 @@ plugins {
     id "io.spring.dependency-management" version "1.0.6.RELEASE"
 }
 
-
 group = 'com.platner'
-version = '0.0.1-SNAPSHOT'
-targetCompatibility=1.8
-sourceCompatibility = '1.8'
+version = '0.0.1'
+//targetCompatibility='1.8'
+//sourceCompatibility = '1.8'
 
 repositories {
 	mavenCentral()
@@ -44,12 +39,3 @@ dependencies {
 bootJar {
     mainClassName = 'com.platner.cayuseapp.CayuseappApplication'
 }
-
-// test {
-// 	outputs.dir snippetsDir
-// }
-
-// asciidoctor {
-// 	inputs.dir snippetsDir
-// 	dependsOn test
-// }
