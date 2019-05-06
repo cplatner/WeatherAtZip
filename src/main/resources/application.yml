@@ -1,3 +1,7 @@
+server:
+  # Pick an unusual number that won't conflict
+  port: 8088
+
 weatherapi:
   # Get the data back in F, not K
   url: http://api.openweathermap.org/data/2.5/weather?zip=%s,us&units=imperial&appid=%s
