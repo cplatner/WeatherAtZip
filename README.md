@@ -1,6 +1,7 @@
-# Cayuse Coding Test
+# Weather At Zip
 
 This is a Spring Boot application that gets weather and location information for a given Zip code.
+Submitted for Cayuse.
 
 ## Building and Running
 
