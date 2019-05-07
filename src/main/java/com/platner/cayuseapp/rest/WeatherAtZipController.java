@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.platner.cayuseapp.model.WeatherData;
 import com.platner.cayuseapp.model.WeatherMessage;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -27,6 +29,7 @@ import java.util.Map;
 @RequestMapping("/weather")
 public class WeatherAtZipController
 {
+    private static Logger logger = LoggerFactory.getLogger(WeatherAtZipController.class);
     @Value("${weatherapi.url}")
     private String weatherApiUri;
     @Value("${weatherapi.appid}")
@@ -157,6 +160,7 @@ public class WeatherAtZipController
                     HttpMethod.GET, new HttpEntity<>("", headers), String.class);
         }
         catch (HttpStatusCodeException e) {
+            logger.debug(String.format("Can't get values from external service at %s", uri), e);
             throw new WeatherRestException(
                     ResponseEntity.status(e.getStatusCode()).body("Error getting data from outside service"));
         }
