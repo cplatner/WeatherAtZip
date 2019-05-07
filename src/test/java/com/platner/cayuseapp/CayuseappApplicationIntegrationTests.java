@@ -60,7 +60,7 @@ public class CayuseappApplicationIntegrationTests
     }
 
     /**
-     * This test has a zip code that is a valid length, but doesn't exist on the westher server.
+     * This test has a zip code that is a valid length, but doesn't exist on the weather server.
      */
     @Test
     public void invalidZip_zipDoesntExist_failsWithNotFound()

@@ -2,12 +2,12 @@ package com.platner.cayuseapp.model;
 
 public class WeatherMessage
 {
-    private String message;
-    private String city;
-    private String zipcode;
-    private double temperature;
-    private String timezone;
-    private double elevation;
+    private final String message;
+    private final String city;
+    private final String zipcode;
+    private final double temperature;
+    private final String timezone;
+    private final double elevation;
 
     public WeatherMessage(final WeatherData weatherData)
     {

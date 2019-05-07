@@ -3,7 +3,6 @@ package com.platner.cayuseapp.rest;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.platner.cayuseapp.SimpleRestTemplate;
 import com.platner.cayuseapp.model.WeatherData;
 import com.platner.cayuseapp.model.WeatherMessage;
 import org.springframework.beans.factory.annotation.Value;
@@ -42,19 +41,19 @@ public class WeatherAtZipController
     private String elevationApiAppId;
 
     /**
-     * Cache for timezonesByZip, since they don't change between calls
+     * Cache for timezones, since they don't change between calls
      */
-    private Map<String, String> timezonesByZip = new HashMap<>();
+    private final Map<String, String> timezonesByZip = new HashMap<>();
     /**
-     * Cache for elevationsByZip, since they don't change between calls
+     * Cache for elevations, since they don't change between calls
      */
-    private Map<String, String> elevationsByZip = new HashMap<>();
+    private final Map<String, String> elevationsByZip = new HashMap<>();
 
-    private static ObjectMapper mapper = new ObjectMapper();
+    private static final ObjectMapper mapper = new ObjectMapper();
 
     @GetMapping
     public ResponseEntity<?> weather(@RequestParam(value = "zipcode") String zipcode)
-   {
+    {
         WeatherData data = new WeatherData();
         try {
             validateZipcode(zipcode);
@@ -97,18 +96,12 @@ public class WeatherAtZipController
 
     private void getTimezone(final String zipcode, WeatherData data) throws WeatherRestException
     {
-//        SimpleRestTemplate restClient = ;
         if (timezonesByZip.containsKey(zipcode)) {
             data.setTimezone(timezonesByZip.get(zipcode));
         } else {
-//            String timezoneUrl = String.format(timezoneApiUrl,
-//                    data.getLatitude(), data.getLongitude(), Instant.now().getEpochSecond(), timezoneApiAppId);
-//            String s = restClient.get(timezoneUrl);
-
             ResponseEntity<?> response = getFromExternalService(
                     String.format(timezoneApiUrl,
                             data.getLatitude(), data.getLongitude(), Instant.now().getEpochSecond(), timezoneApiAppId));
-
 
             try {
                 JsonNode root = mapper.readTree(response.getBody().toString());
@@ -149,7 +142,7 @@ public class WeatherAtZipController
         }
     }
 
-    private ResponseEntity<?> getFromExternalService(String uri)
+    private static ResponseEntity<?> getFromExternalService(String uri)
             throws WeatherRestException
     {
         RestTemplate rest = new RestTemplate();
@@ -157,7 +150,7 @@ public class WeatherAtZipController
         headers.add("Content-Type", "application/json");
         headers.add("Accept", "*/*");
 
-        ResponseEntity<?> responseEntity = ResponseEntity.badRequest().build();
+        ResponseEntity<?> responseEntity;
 
         try {
             responseEntity = rest.exchange(uri,
@@ -174,7 +167,7 @@ public class WeatherAtZipController
     /**
      * Basic checks for valid zip codes
      */
-    private void validateZipcode(String zipcode)
+    private static void validateZipcode(String zipcode)
             throws WeatherRestException
     {
         if (zipcode == null || zipcode.isEmpty()) {
