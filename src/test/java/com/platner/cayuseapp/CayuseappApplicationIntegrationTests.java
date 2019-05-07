@@ -1,5 +1,6 @@
 package com.platner.cayuseapp;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -71,26 +72,25 @@ public class CayuseappApplicationIntegrationTests
     @Test
     public void valid_5DigitZip_succeeds_1()
     {
-        ResponseEntity<?> response = restTemplate.getForEntity(String.format("http://localhost:%d/weather?zipcode=97006", port), String.class);
+        ResponseEntity<?> response = restTemplate.getForEntity(String.format("http://localhost:%d/weather?zipcode=97006", port), JsonNode.class);
         Assert.assertEquals(HttpStatus.OK, response.getStatusCode());
+
+        JsonNode node = (JsonNode) response.getBody();
+        Assert.assertEquals("Portland", node.at("/city").asText());
+        Assert.assertTrue(node.at("/timezone").asText().startsWith("Pacific"));
+        Assert.assertEquals(67, Math.round(Double.valueOf(node.at("/elevation").asText())));
     }
 
     @Test
     public void valid_5DigitZip_succeeds_2()
     {
         //* Somewhere in Boston
-        ResponseEntity<?> response = restTemplate.getForEntity(String.format("http://localhost:%d/weather?zipcode=02129", port), String.class);
+        ResponseEntity<?> response = restTemplate.getForEntity(String.format("http://localhost:%d/weather?zipcode=02129", port), JsonNode.class);
         Assert.assertEquals(HttpStatus.OK, response.getStatusCode());
-    }
 
-    /**
-     * Post code for London with country identifier.  I didn't see thi sas technically in the spec, since the spec
-     * only addressed providing the zip code.  However, I wanted to prove it worked.
-     */
-    @Test
-    public void valid_nonUsZip_succeeds()
-    {
-        ResponseEntity<?> response = restTemplate.getForEntity(String.format("http://localhost:%d/weather?zipcode=WC2N+5DU,uk", port), String.class);
-        Assert.assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        JsonNode node = (JsonNode) response.getBody();
+        Assert.assertEquals("Boston", node.at("/city").asText());
+        Assert.assertTrue(node.at("/timezone").asText().startsWith("Eastern"));
+        Assert.assertEquals(11, Math.round(Double.valueOf(node.at("/elevation").asText())));
     }
 }
