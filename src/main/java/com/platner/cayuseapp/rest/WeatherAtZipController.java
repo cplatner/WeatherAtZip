@@ -160,7 +160,7 @@ public class WeatherAtZipController
                     HttpMethod.GET, new HttpEntity<>("", headers), String.class);
         }
         catch (HttpStatusCodeException e) {
-            logger.debug(String.format("Can't get values from external service at %s", uri), e);
+            logger.error(String.format("Can't get values from external service at %s", uri), e);
             throw new WeatherRestException(
                     ResponseEntity.status(e.getStatusCode()).body("Error getting data from outside service"));
         }
