@@ -54,82 +54,15 @@ public class WeatherAtZipController
 
     @GetMapping
     public ResponseEntity<?> weather(@RequestParam(value = "zipcode") String zipcode)
-    {
-        SimpleRestTemplate restClient = new SimpleRestTemplate();
-
+   {
         WeatherData data = new WeatherData();
         try {
-            ResponseEntity<?> checkZip = validateZipcode(zipcode);
-            if (checkZip.getStatusCode().isError()) {
-                return checkZip;
-            }
+            validateZipcode(zipcode);
 
             data.setZipcode(zipcode);
-            //* Get weather
-            String weatherUrl = String.format(weatherApiUri, zipcode, weatherApiAppId);
-            ResponseEntity<?> response = get(weatherUrl);
-            if (response.getStatusCode().isError()) {
-                return response;
-            }
-            try {
-                JsonNode root = mapper.readTree(response.getBody().toString());
-                data.setTemperature(root.at("/main/temp").asText())
-                        .setCity(root.at("/name").asText())
-                        .setLatitude(root.at("/coord/lat").asText())
-                        .setLongitude(root.at("/coord/lon").asText());
-
-            }
-            catch (JsonParseException e) {
-                throw new WeatherRestException(
-                        ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error parsing data from temperature server"));
-            }
-            catch (IOException e) {
-                throw new WeatherRestException(
-                        ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error reading data from temperature server"));
-            }
-
-            //* Get timezonee
-            if (timezonesByZip.containsKey(zipcode)) {
-                data.setTimezone(timezonesByZip.get(zipcode));
-            } else {
-                String timezoneUrl = String.format(timezoneApiUrl,
-                        data.getLatitude(), data.getLongitude(), Instant.now().getEpochSecond(), timezoneApiAppId);
-                String s = restClient.get(timezoneUrl);
-                try {
-                    JsonNode root = mapper.readTree(s);
-                    timezonesByZip.put(zipcode,
-                            data.setTimezone(root.at("/timeZoneName").asText()).getTimezone());
-                }
-                catch (JsonParseException e) {
-                    throw new WeatherRestException(
-                            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error parsing data from timezone server"));
-                }
-                catch (IOException e) {
-                    throw new WeatherRestException(
-                            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error reading data from timezone server"));
-                }
-            }
-
-            //* Get elevation
-            if (elevationsByZip.containsKey(zipcode)) {
-                data.setElevation(elevationsByZip.get(zipcode));
-            } else {
-                String elevationUrl = String.format(elevationApiUrl, data.getLatitude(), data.getLongitude(), elevationApiAppId);
-                String s = restClient.get(elevationUrl);
-                try {
-                    JsonNode root = mapper.readTree(s);
-                    elevationsByZip.put(zipcode,
-                            data.setElevation(root.at("/results/0/elevation").asText()).getElevation());
-                }
-                catch (JsonParseException e) {
-                    throw new WeatherRestException(
-                            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error parsing data from elevation server"));
-                }
-                catch (IOException e) {
-                    throw new WeatherRestException(
-                            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error reading data from elevation server"));
-                }
-            }
+            getWeather(zipcode, data);
+            getTimezone(zipcode, data);
+            getElevation(zipcode, data);
         }
         catch (WeatherRestException e) {
             return e.getInternalEntity();
@@ -138,7 +71,85 @@ public class WeatherAtZipController
         return new ResponseEntity<>(new WeatherMessage(data), HttpStatus.OK);
     }
 
-    private ResponseEntity<?> get(String uri)
+    private void getWeather(final String zipcode, WeatherData data) throws WeatherRestException
+    {
+        ResponseEntity<?> response = getFromExternalService(String.format(weatherApiUri, zipcode, weatherApiAppId));
+        if (response.getStatusCode().isError()) {
+            throw new WeatherRestException(response);
+        }
+        try {
+            JsonNode root = mapper.readTree(response.getBody().toString());
+            data.setTemperature(root.at("/main/temp").asText())
+                    .setCity(root.at("/name").asText())
+                    .setLatitude(root.at("/coord/lat").asText())
+                    .setLongitude(root.at("/coord/lon").asText());
+
+        }
+        catch (JsonParseException e) {
+            throw new WeatherRestException(
+                    ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error parsing data from temperature server"));
+        }
+        catch (IOException e) {
+            throw new WeatherRestException(
+                    ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error reading data from temperature server"));
+        }
+    }
+
+    private void getTimezone(final String zipcode, WeatherData data) throws WeatherRestException
+    {
+//        SimpleRestTemplate restClient = ;
+        if (timezonesByZip.containsKey(zipcode)) {
+            data.setTimezone(timezonesByZip.get(zipcode));
+        } else {
+//            String timezoneUrl = String.format(timezoneApiUrl,
+//                    data.getLatitude(), data.getLongitude(), Instant.now().getEpochSecond(), timezoneApiAppId);
+//            String s = restClient.get(timezoneUrl);
+
+            ResponseEntity<?> response = getFromExternalService(
+                    String.format(timezoneApiUrl,
+                            data.getLatitude(), data.getLongitude(), Instant.now().getEpochSecond(), timezoneApiAppId));
+
+
+            try {
+                JsonNode root = mapper.readTree(response.getBody().toString());
+                timezonesByZip.put(zipcode,
+                        data.setTimezone(root.at("/timeZoneName").asText()).getTimezone());
+            }
+            catch (JsonParseException e) {
+                throw new WeatherRestException(
+                        ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error parsing data from timezone server"));
+            }
+            catch (IOException e) {
+                throw new WeatherRestException(
+                        ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error reading data from timezone server"));
+            }
+        }
+    }
+
+    private void getElevation(final String zipcode, WeatherData data) throws WeatherRestException
+    {
+        if (elevationsByZip.containsKey(zipcode)) {
+            data.setElevation(elevationsByZip.get(zipcode));
+        } else {
+            ResponseEntity<?> response = getFromExternalService(
+                    String.format(elevationApiUrl, data.getLatitude(), data.getLongitude(), elevationApiAppId));
+            try {
+                JsonNode root = mapper.readTree(response.getBody().toString());
+                elevationsByZip.put(zipcode,
+                        data.setElevation(root.at("/results/0/elevation").asText()).getElevation());
+            }
+            catch (JsonParseException e) {
+                throw new WeatherRestException(
+                        ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error parsing data from elevation server"));
+            }
+            catch (IOException e) {
+                throw new WeatherRestException(
+                        ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error reading data from elevation server"));
+            }
+        }
+    }
+
+    private ResponseEntity<?> getFromExternalService(String uri)
             throws WeatherRestException
     {
         RestTemplate rest = new RestTemplate();
@@ -160,27 +171,29 @@ public class WeatherAtZipController
         return responseEntity;
     }
 
-    private ResponseEntity<?> validateZipcode(String zipcode)
+    /**
+     * Basic checks for valid zip codes
+     */
+    private void validateZipcode(String zipcode)
+            throws WeatherRestException
     {
         if (zipcode == null || zipcode.isEmpty()) {
-            return ResponseEntity.badRequest().body("Missing Zip Code");
+            throw new WeatherRestException(ResponseEntity.badRequest().body("Missing Zip Code"));
         }
 
         //* check for out-of-country zips
         for (char c : zipcode.toCharArray()) {
-            if (!Character.isDigit(c) || c == '-') {
-                return ResponseEntity.badRequest().body("Zip Code has invalid characters");
+            if (!Character.isDigit(c)) {
+                throw new WeatherRestException(ResponseEntity.badRequest().body("Zip Code has invalid characters"));
             }
         }
 
         if (zipcode.length() < 5) {
-            return ResponseEntity.badRequest().body("Zip Code is too short");
+            throw new WeatherRestException(ResponseEntity.badRequest().body("Zip Code is too short"));
         }
 
         if (zipcode.length() > 5) {
-            return ResponseEntity.badRequest().body("Zip Code is too long");
+            throw new WeatherRestException(ResponseEntity.badRequest().body("Zip Code is too long"));
         }
-
-        return ResponseEntity.ok().build();
     }
 }
